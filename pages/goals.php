@@ -1,7 +1,4 @@
 <?php
-// Filename: goals.php
-// Destination: /study_planner/pages/goals.php
-
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/db.php';

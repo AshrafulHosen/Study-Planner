@@ -1,7 +1,4 @@
 <?php
-// Filename: reports.php
-// Destination: /study_planner/pages/reports.php
-
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/db.php';

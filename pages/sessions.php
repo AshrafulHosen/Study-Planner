@@ -30,6 +30,46 @@ if (isset($_POST['action']) && $_POST['action'] === 'delete') {
     redirect('pages/sessions.php');
 }
 
+// Handle Session Edit
+if (isset($_POST['action']) && $_POST['action'] === 'edit') {
+    verify_csrf();
+    
+    $sessionId = (int)($_POST['session_id'] ?? 0);
+    $subjectId = (int)($_POST['subject_id'] ?? 0);
+    $sessionDate = trim($_POST['session_date'] ?? '');
+    $durationMin = (int)($_POST['duration_min'] ?? 0);
+    $notes = trim($_POST['notes'] ?? '');
+
+    $session = fetch_one('SELECT id FROM study_sessions WHERE id = ? AND user_id = ?', 'ii', [$sessionId, $userId]);
+    
+    if (!$session) {
+        $errors['general'] = 'Session not found.';
+    } else {
+        if ($subjectId <= 0) $errors['subject_id'] = 'Please select a subject.';
+        if (empty($sessionDate)) $errors['session_date'] = 'Date is required.';
+        if ($durationMin <= 0) $errors['duration_min'] = 'Duration must be greater than 0.';
+
+        if ($subjectId > 0 && !fetch_one('SELECT id FROM subjects WHERE id = ? AND user_id = ?', 'ii', [$subjectId, $userId])) {
+            $errors['subject_id'] = 'Invalid subject selected.';
+        }
+
+        if (empty($errors)) {
+            $success = execute_statement(
+                'UPDATE study_sessions SET subject_id = ?, session_date = ?, duration_min = ?, notes = ? WHERE id = ? AND user_id = ?',
+                'isssii',
+                [$subjectId, $sessionDate, $durationMin, $notes, $sessionId, $userId]
+            );
+            
+            if ($success) {
+                set_flash('success', 'Study session updated successfully.');
+                redirect('pages/sessions.php');
+            } else {
+                $errors['general'] = 'Failed to update study session.';
+            }
+        }
+    }
+}
+
 // Handle Session Addition
 if (isset($_POST['action']) && $_POST['action'] === 'add') {
     verify_csrf();
@@ -143,6 +183,7 @@ require_once __DIR__ . '/../includes/header.php';
                                     <?= h($session['notes'] ?: '-') ?>
                                 </td>
                                 <td class="text-end pe-4">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editSessionModal<?= $session['id'] ?>" title="Edit"><i class="bi bi-pencil"></i></button>
                                     <form method="post" action="" class="d-inline" data-confirm="Delete this session?">
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="action" value="delete">
@@ -158,6 +199,60 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
     </div>
 </div>
+
+<?php if (!empty($sessions)): ?>
+    <?php foreach ($sessions as $session): ?>
+        <!-- Edit Session Modal -->
+        <div class="modal fade" id="editSessionModal<?= $session['id'] ?>" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog text-start">
+                <div class="modal-content">
+                    <div class="modal-header border-0 pb-0">
+                        <h5 class="modal-title fw-bold">Edit Study Session</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form method="post" action="" id="editSessionForm<?= $session['id'] ?>">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="edit">
+                            <input type="hidden" name="session_id" value="<?= $session['id'] ?>">
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Subject <span class="text-danger">*</span></label>
+                                <select class="form-select" name="subject_id" required>
+                                    <option value="">Select a subject...</option>
+                                    <?php foreach ($subjects as $subject): ?>
+                                        <option value="<?= $subject['id'] ?>" <?= ($session['subject_id'] == $subject['id']) ? 'selected' : '' ?>>
+                                            <?= h($subject['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Date <span class="text-danger">*</span></label>
+                                <input type="date" class="form-control" name="session_date" value="<?= h($session['session_date']) ?>" required>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">Duration (minutes) <span class="text-danger">*</span></label>
+                                <input type="number" class="form-control" name="duration_min" min="1" value="<?= h((string)$session['duration_min']) ?>" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label">Notes (Optional)</label>
+                                <textarea class="form-control" name="notes" rows="3"><?= h($session['notes']) ?></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" form="editSessionForm<?= $session['id'] ?>" class="btn btn-primary">Update Session</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    <?php endforeach; ?>
+<?php endif; ?>
 
 <!-- Add Session Modal -->
 <div class="modal fade" id="addSessionModal" tabindex="-1" aria-hidden="true">
