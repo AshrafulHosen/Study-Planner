@@ -1,7 +1,4 @@
 <?php
-// Filename: db.php
-// Destination: /study_planner/includes/db.php
-
 declare(strict_types=1);
 
 if (session_status() === PHP_SESSION_NONE) {

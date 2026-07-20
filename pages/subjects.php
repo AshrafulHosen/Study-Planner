@@ -1,8 +1,13 @@
 <?php
-$pageTitle = 'Subjects';
-require_once __DIR__ . '/../includes/header.php';
+declare(strict_types=1);
+
+require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/auth.php';
 
 require_login();
+
+$pageTitle = 'Subjects';
+require_once __DIR__ . '/../includes/header.php';
 
 $userId = (int) current_user()['id'];
 $errors = [];
